@@ -11,4 +11,6 @@ For example
 python currency.py USD EUR to TRY done 1000 1000
 ```
 
-since for now I just use a free service from currencylayer.com to fetch the live currency rates you must list USD as the first surrency ratio because of limited number of provided services
+since for now I just use a free service from currencylayer.com to fetch the live currency rates you must list USD as the first surrency ratio because of the limited number of provided services.
+
+Note: You will need to register for an access token from currencylayer.com and replace it in the script to be able to run.
