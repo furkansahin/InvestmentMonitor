@@ -4,12 +4,15 @@ from copy import deepcopy
 import requests
 import httplib, urllib
 import time
+import telepot
+
+
 
 def fetch_currency(sources, targets):
     result_dictionary = {}
     targets_serialize = ""
     url_base = "http://apilayer.net/api/live"
-    access_key = "XXXXXXXXXXXXXXXX"
+    access_key = "XXXXXXXXXXXXXXXXXXXXXXXXXX"
 
     #   fetch for sources 0, than we are going to calculate for ourselves
     source = sources[0]
@@ -43,31 +46,18 @@ def current_investment(from_arr, to_arr, investments):
         for to in to_arr:
             sum_invest += (current_currencies[frm + to] * float(investments[index]))
         index += 1
-
+    print sum_invest
     return sum_invest
 
 
-def notify(bool):
-    api_token = "XXXXXXXXXXXXXXXX"
-    user_key = "XXXXXXXXXXXXXXXX"
+def notify(jackpot, sum_invest):
+    bot = telepot.Bot('<BOT_ID>')
 
-    conn = httplib.HTTPSConnection("api.pushover.net:443")
-    if bool:
-        conn.request("POST", "/1/messages.json",
-                     urllib.urlencode({
-                         "token": api_token,
-                         "user": user_key,
-                         "message": "Wanna buy a car u faggot?",
-                     }), {"Content-type": "application/x-www-form-urlencoded"})
+    if jackpot:
+        bot.sendMessage(<CONVERSATION_ID>, "Wanna buy a car u faggot? Your total investment value is " + str(sum_invest))
     else:
-        conn.request("POST", "/1/messages.json",
-                     urllib.urlencode({
-                         "token": api_token,
-                         "user": user_key,
-                         "message": "U poor bastard! Watch out your money.",
-                     }), {"Content-type": "application/x-www-form-urlencoded"})
+        bot.sendMessage(<CONVERSATION_ID>, "U poor bastard! Watch out your money. Your total investment value is " + str(sum_invest))
 
-    return conn.getresponse()
 
 
 def main():
@@ -103,10 +93,10 @@ def main():
     while True:
         sum_invest = current_investment(from_arr[1:], to_arr, investments)
         if sum_invest <= threshold_min:
-            notify(False)
+            notify(False, sum_invest)
         elif sum_invest >= threshold_max:
-            notify(True)
-        time.sleep(60)
+            notify(True, sum_invest)
+        time.sleep(3600)
 
 
 if __name__ == "__main__":
