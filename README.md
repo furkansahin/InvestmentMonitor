@@ -7,7 +7,7 @@ It is created because of my slothful character. :)
 
 If you have an investment as a foreign currency, you may want to check it regularly because of the unstable situation of the economy (Yes, I live in Turkey :)) You can just run this script and wait for a notification.
 
-Investment monitor takes inputs such as the amount of currency you have and you are living, waits for a minimum and maximum threshold to be notified and starts to run. You can just forget about your money now, it's gonna make you now when you need to know.
+Investment monitor takes inputs such as the amount of currency you have and you are living, waits for a minimum and maximum threshold to be notified and starts to run. You can just forget about your money now, it's gonna make you know when you need to know.
 
 ## Needs
 * Python 2.7
