@@ -1,0 +1,31 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1504\cocoasubrtf710
+{\fonttbl\f0\fnil\fcharset0 Menlo-Regular;}
+{\colortbl;\red255\green255\blue255;\red0\green0\blue0;}
+{\*\expandedcolortbl;;\csgenericrgb\c0\c0\c0;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww10800\viewh8400\viewkind0
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf2 Citus setup instructions\
+\
+1- Setup PostgreSQL\
+2- Install citus\
+3- initdb CurrencyDB\
+4- initdb CurrencyDB_worker1\
+5- initdb CurrencyDB_worker2\
+6- echo "shared_preload_libraries = 'citus'" >> CurrencyDB/postgresql.conf\
+7- echo "shared_preload_libraries = 'citus'" >> CurrencyDB_worker1/postgresql.conf\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+\cf2 8- echo "shared_preload_libraries = 'citus'" >> CurrencyDB_worker2/postgresql.conf\
+9- pg_ctl -D CurrencyDB -o "-p 9700" -l CurrencyDB_logfile start\
+10- pg_ctl -D CurrencyDB_worker1 -o "-p 9701" -l CurrencyDB_worker1_logfile start\
+11- pg_ctl -D CurrencyDB_worker2 -o "-p 9702" -l CurrencyDB_worker2_logfile start\
+12- createdb -p 9700 $(whoami)\
+13- createdb -p 9701 $(whoami)\
+14- createdb -p 9702 $(whoami)\
+15- psql -p 9700 -c "CREATE EXTENSION citus;"\
+16- psql -p 9701 -c "CREATE EXTENSION citus;"\
+17- psql -p 9702 -c "CREATE EXTENSION citus;"\
+18- psql -p 9700 -c "SELECT * from master_add_node('localhost', 9701);"\
+19- psql -p 9700 -c "SELECT * from master_add_node('localhost', 9702);\'94\
+20- Now you can run the script!\
+}
