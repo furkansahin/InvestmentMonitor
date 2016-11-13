@@ -1,11 +1,14 @@
 import sys
 import json
 from copy import deepcopy
+from threading import Thread
+
 import requests
 import http.client, urllib
 import time
 import telepot
 
+users = set()
 
 
 def fetch_currency(sources, targets):
@@ -51,15 +54,35 @@ def current_investment(from_arr, to_arr, investments):
     return sum_invest
 
 
+def storeUsers():
+    bot = telepot.Bot('XXXXXXXXXXXXXXXXXXXXXXXXXX')
+    response = bot.getUpdates()
+
+    last_message_index = len(response)
+    while True:
+        response = bot.getUpdates()
+        for message in response[last_message_index:]:
+            chat_id = message['message']['chat']['id']
+            users.add(chat_id)
+
+
 def notify(jackpot, sum_invest):
     bot = telepot.Bot('XXXXXXXXXXXXXXXXXXXXXXXXXX')
     response = bot.getUpdates()
+
+    print(response)
     ##### response[len(response)-1]['message']['chat']['id']
     ##### len(response)-1 gives us the last user
     if jackpot:
-        bot.sendMessage((response[len(response)-1]['message']['chat']['id']),"hello! Your total investment value is " + str(sum_invest))
+        for user in users:
+            bot.sendMessage(user, "hello! Your total investment value is " + str(sum_invest))
+        #        bot.sendMessage((response[len(response)-1]['message']['chat']['id']),"hello! Your total investment value is " + str(sum_invest))
     else:
-        bot.sendMessage((response[len(response)-1]['message']['chat']['id']),"hello! Your total investment value is " + str(sum_invest))
+        for user in users:
+            bot.sendMessage(user, "hello! Your total investment value is " + str(sum_invest))
+
+
+# bot.sendMessage((response[len(response)-1]['message']['chat']['id']),"hello! Your total investment value is " + str(sum_invest))
 
 
 def main():
@@ -87,18 +110,22 @@ def main():
         investments.append(investment)
 
     sum_invest = current_investment(from_arr[1:], to_arr, investments)
-    print (sum_invest)
+    print(sum_invest)
 
     threshold_min = float(input("enter your min threshold: "))
     threshold_max = float(input("enter your max threshold: "))
 
+    userThread = Thread(target=storeUsers)
+    userThread.start()
     while True:
         sum_invest = current_investment(from_arr[1:], to_arr, investments)
-        if sum_invest <= threshold_min:
-            notify(False, sum_invest)
-        elif sum_invest >= threshold_max:
-            notify(True, sum_invest)
-        time.sleep(3600)
+        for i in range(360):
+            if sum_invest <= threshold_min:
+                notify(False, sum_invest)
+            elif sum_invest >= threshold_max:
+                notify(True, sum_invest)
+            time.sleep(10)
+        #time.sleep(3600)
 
 
 if __name__ == "__main__":
