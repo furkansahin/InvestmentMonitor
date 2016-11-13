@@ -12,7 +12,8 @@ Investment monitor takes inputs such as the amount of currency you have and you 
 ## Needs
 * Python 2.7 for Pushover implementation
 * Python 3.x for Telegram bot development
- * Python Requests library
+ * Python requests library
+ * Python telepot library
 * Currency layer account (free if you are okay with 1 check per hour)
 * Pushover account (Free for the first 7 days, then just 4.99$ for each platform once)
 * Mobile platform having Pushover application installed
