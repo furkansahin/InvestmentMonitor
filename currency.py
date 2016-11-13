@@ -12,7 +12,7 @@ def fetch_currency(sources, targets):
     result_dictionary = {}
     targets_serialize = ""
     url_base = "http://apilayer.net/api/live"
-    access_key = "64169c0173a04ae7ec3b56975b36fbde"
+    access_key = "XXXXXXXXXXXXXXXXXXXXXXXX"
 
     #   fetch for sources 0, than we are going to calculate for ourselves
     source = sources[0]
@@ -52,7 +52,7 @@ def current_investment(from_arr, to_arr, investments):
 
 
 def notify(jackpot, sum_invest):
-    bot = telepot.Bot('250888199:AAEPTBONBh2Vdvo13Z2P9IS5ORlI-mdf80A')
+    bot = telepot.Bot('@moneys_watch_bot id here')
     response = bot.getUpdates()
     ##### response[len(response)-1]['message']['chat']['id']
     ##### len(response)-1 gives us the last user
@@ -98,7 +98,7 @@ def main():
             notify(False, sum_invest)
         elif sum_invest >= threshold_max:
             notify(True, sum_invest)
-        time.sleep(10)
+        time.sleep(3600)
 
 
 if __name__ == "__main__":
