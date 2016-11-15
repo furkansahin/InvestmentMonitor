@@ -8,9 +8,8 @@ script: pytest
 services:
   - postgresql
 before_script:
-  - pg_ctl -D travis_ci_test -o "-p 9700" -l CurrencyDB_logfile start
-  - psql -c 'create database travis_ci_test;' -U postgres
-  - psql -c 'CREATE TABLE users (
+  - psql -p 9700 -c 'create database travis_ci_test;' -U postgres
+  - psql -p 9700 -c 'CREATE TABLE users (
              user_id TEXT unique,
              currency_from TEXT[],
              currency_to TEXT,
