@@ -1,18 +1,23 @@
 import sys
-import json
 from copy import deepcopy
+from threading import Thread
+
 import requests
-import http.client, urllib
 import time
 import telepot
+import psycopg2
 
+conn_string = "port=9700"
+conn = psycopg2.connect(conn_string)
+cursor = conn.cursor()
+users = set()
 
 
 def fetch_currency(sources, targets):
     result_dictionary = {}
     targets_serialize = ""
     url_base = "http://apilayer.net/api/live"
-    access_key = "XXXXXXXXXXXXXXXXXXXXXXXX"
+    access_key = "XXXXXX"
 
     #   fetch for sources 0, than we are going to calculate for ourselves
     source = sources[0]
@@ -51,15 +56,37 @@ def current_investment(from_arr, to_arr, investments):
     return sum_invest
 
 
-def notify(jackpot, sum_invest):
-    bot = telepot.Bot('@moneys_watch_bot id here')
+def storeUsers():
+    bot = telepot.Bot('XXXXXX')
     response = bot.getUpdates()
+
+    last_message_index = len(response)
+    while True:
+        response = bot.getUpdates()
+        for message in response:
+            chat_id = message['message']['chat']['id']
+
+            sql = "INSERT INTO users VALUES('%s', ARRAY[\'USD\', \'EUR\'], \'TRY\',\'{1000,1000}\'::int[],6000,6500);"
+            cursor.execute(sql, (chat_id,))
+            conn.commit()
+
+
+def notify(jackpot, sum_invest):
+    bot = telepot.Bot('XXXXXX')
+    response = bot.getUpdates()
+
     ##### response[len(response)-1]['message']['chat']['id']
     ##### len(response)-1 gives us the last user
     if jackpot:
-        bot.sendMessage((response[len(response)-1]['message']['chat']['id']),"hello! Your total investment value is " + str(sum_invest))
+        for user in users:
+            bot.sendMessage(user, "hello! Your total investment value is " + str(sum_invest))
+            #        bot.sendMessage((response[len(response)-1]['message']['chat']['id']),"hello! Your total investment value is " + str(sum_invest))
     else:
-        bot.sendMessage((response[len(response)-1]['message']['chat']['id']),"hello! Your total investment value is " + str(sum_invest))
+        for user in users:
+            bot.sendMessage(user, "hello! Your total investment value is " + str(sum_invest))
+
+
+# bot.sendMessage((response[len(response)-1]['message']['chat']['id']),"hello! Your total investment value is " + str(sum_invest))
 
 
 def main():
@@ -85,20 +112,30 @@ def main():
     investments = []
     for investment in sys.argv[index:]:
         investments.append(investment)
-
-    sum_invest = current_investment(from_arr[1:], to_arr, investments)
-    print (sum_invest)
+    user_thread = Thread(target=storeUsers)
+    user_thread.start()
+#    sum_invest = current_investment(from_arr[1:], to_arr, investments)
+ #   print(sum_invest)
 
     threshold_min = float(input("enter your min threshold: "))
     threshold_max = float(input("enter your max threshold: "))
-
+    conn_string = "port=9700"
+    conn = psycopg2.connect(conn_string)
+    cursor = conn.cursor()
     while True:
+        cursor.execute("SELECT user_id FROM users;")
+        for i in cursor:
+            users.add(i[0])
+
         sum_invest = current_investment(from_arr[1:], to_arr, investments)
-        if sum_invest <= threshold_min:
-            notify(False, sum_invest)
-        elif sum_invest >= threshold_max:
-            notify(True, sum_invest)
-        time.sleep(3600)
+        for i in range(360):
+
+            if sum_invest <= threshold_min:
+                notify(False, sum_invest)
+            elif sum_invest >= threshold_max:
+                notify(True, sum_invest)
+            time.sleep(10)
+            # time.sleep(3600)
 
 
 if __name__ == "__main__":
