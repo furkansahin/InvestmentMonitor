@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.com/furkansahin/InterviewWork.svg?token=RNbzVctqSpCFa4kK2yzq&branch=master)](https://travis-ci.com/furkansahin/InterviewWork)
+
 # InvestmentMonitor
 This is just a personal investment monitor implemented with Python.
 
