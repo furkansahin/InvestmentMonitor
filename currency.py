@@ -1,141 +1,164 @@
-import sys
 from copy import deepcopy
-from threading import Thread
-
 import requests
 import time
 import telepot
-import psycopg2
 
-conn_string = "port=9700"
-conn = psycopg2.connect(conn_string)
-cursor = conn.cursor()
-users = set()
+users = {}
+token = raw_input('token:')
+bot = telepot.Bot(token)
+currencies = {"USD", "TRY", "GBP", "CHF", "JPY", "EUR"}
+currencies_in_usage = set()
 
 
-def fetch_currency(sources, targets):
-    result_dictionary = {}
-    targets_serialize = ""
-    url_base = "http://apilayer.net/api/live"
-    access_key = "XXXXXX"
-
-    #   fetch for sources 0, than we are going to calculate for ourselves
-    source = sources[0]
-    targets.extend(sources[1:])
-
-    for target in targets:
-        targets_serialize += target + ","
-    targets_serialize = targets_serialize[:-1]
-    url = url_base + "?access_key=" + access_key + "&source = " + str(
-        source) + "& currencies=" + targets_serialize + "&format=1"
+def fetch_currency():
+    url = "http://finance.yahoo.com/webservice/v1/symbols/allcurrencies/quote?format=json"
 
     response = requests.get(url)
 
     data = response.json()
+
+    cur_values = {}
     if data["success"]:
+        for cur in currencies_in_usage:
+            if cur is not "USD":
+                cur_values["USD/" + cur] = 0
 
-        for i in range(len(targets) - len(sources) + 1):
-            result_dictionary[sources[0] + targets[i]] = data["quotes"][sources[0] + targets[i]]
+        for resource in data["list"]["resources"]:
+            if data["list"]["resources"][resource]["name"] in cur_values:
+                cur_values[data["list"]["resources"][resource]["name"]] = float(data["list"]["resources"][resource]["price"])
 
-        for i in range(1, len(sources)):
-            for j in range(len(targets) - len(sources) + 1):
-                result_dictionary[sources[i] + targets[j]] = (result_dictionary[sources[0] + targets[j]]) / \
-                                                             data["quotes"][sources[0] + targets[j + len(sources) - 1]]
-    return (result_dictionary)
-
-
-def current_investment(from_arr, to_arr, investments):
-    current_currencies = fetch_currency(from_arr, deepcopy(to_arr))
-    sum_invest = 0.0
-    index = 0
-    for frm in from_arr:
-        for to in to_arr:
-            sum_invest += (current_currencies[frm + to] * float(investments[index]))
-        index += 1
-    print(sum_invest)
-    return sum_invest
+    cur_values["USD/USD"] = 1
+    return cur_values
 
 
-def storeUsers():
-    bot = telepot.Bot('XXXXXX')
-    response = bot.getUpdates()
+def current_investment(cur_values, money, to_cur):
+    sum_investment = 0.0
 
-    last_message_index = len(response)
-    while True:
-        response = bot.getUpdates()
-        for message in response:
-            chat_id = message['message']['chat']['id']
+    for mon in money:
+        sum_investment += (cur_values["USD/" + to_cur] / cur_values["USD/" + mon]) * money[mon]
 
-            sql = "INSERT INTO users VALUES('%s', ARRAY[\'USD\', \'EUR\'], \'TRY\',\'{1000,1000}\'::int[],6000,6500);"
-            cursor.execute(sql, (chat_id,))
-            conn.commit()
+    return sum_investment
 
 
-def notify(jackpot, sum_invest):
-    bot = telepot.Bot('XXXXXX')
-    response = bot.getUpdates()
+def send_message(msg_type, user, name, money=" ", user_dict={}):
+    msg = ""
 
-    ##### response[len(response)-1]['message']['chat']['id']
-    ##### len(response)-1 gives us the last user
-    if jackpot:
-        for user in users:
-            bot.sendMessage(user, "hello! Your total investment value is " + str(sum_invest))
-            #        bot.sendMessage((response[len(response)-1]['message']['chat']['id']),"hello! Your total investment value is " + str(sum_invest))
-    else:
-        for user in users:
-            bot.sendMessage(user, "hello! Your total investment value is " + str(sum_invest))
+    if msg_type == "welcome":
+        msg = "Hello " + str(name) + "welcome to the investment monitor. \n To start to use the bot, you can use the " \
+                                     "command \info "
+    elif msg_type == "usage":
+        msg = "To use the bot you can use the following commands " \
+              "\n /to_cur [CURRENCY] (e.g. /to_cur TRY) : indicates the currency you live in. " \
+              "\n /add [AMOUNT] [CURRENCY] (e.g. /add 5000 USD) : adds the indicated amount to your account." \
+              "\n /rem [AMOUNT] [CURRENCY] (e.g. /rem 3000 USD) : removes the indicated amount from your account." \
+              "\n /info lists all of the money in your account and gives the sum. "
+    elif msg_type == "add_money":
+        msg = "Dear " + name + ", " + money + " is added to your account"
+    elif msg_type == "rem_money":
+        msg = "Dear " + name + ", " + money + " is subtracted from your account"
+    elif msg_type == "rem_money_neg":
+        msg = "Dear " + name + ", " + money + "could not be subtracted from your account, \nprobably you don't have " \
+                                              "enough balance."
+    elif msg_type == "info":
+        msg = "Dear " + name + ", your balance is as the following;\n"
+        for money in user_dict[user]["money"]:
+            msg += user_dict[user]["money"][money] + " " + money + "\n"
+    elif msg_type == "none_to_cur":
+        msg = "Dear " + name + ", please first define the currency you live in with the command /to_cur CUR"
+
+    bot.sendMessage(user, msg)
 
 
-# bot.sendMessage((response[len(response)-1]['message']['chat']['id']),"hello! Your total investment value is " + str(sum_invest))
+def is_valid(txt):
+    if "/add" in txt:
+        parts = txt.split(" ")
+        if parts[0] == "/add":
+            amount = 0
+            try:
+                amount = float(parts[1])
+            except ValueError:
+                return False
+
+            currency = parts[2]
+            if currency in currencies:
+                return True
+    elif "/rem" in txt :
+        parts = txt.split(" ")
+        if parts[0] == "/rem":
+            amount = 0
+            try:
+                amount = float(parts[1])
+            except ValueError:
+                return False
+
+            currency = parts[2]
+            if currency in currencies:
+                return True
+    elif "/to_cur" in txt:
+        parts = txt.split(" ")
+        if parts[0] == "/to_cur" and parts[1] in currencies:
+            return True
+
+    elif txt == "/info" or txt == "/usage" or txt == "/start":
+        return True
+
+    return False
+
+
+def message_handler(message):
+    txt = str(message['text'])
+    user = message['from']['id']
+    name = message['from']['first_name']
+
+    if is_valid(txt):
+        if user not in users:
+            users[user]["name"] = name
+        if txt == "/start":
+            send_message("welcome", user, name)
+        elif txt == "/usage":
+            send_message("usage", user, name)
+        elif "/add" in txt:
+            parts = txt.split(" ")
+            if "to_cur" not in users[user]:
+                send_message("none_to_cur", user, name)
+            else:
+                if "money" not in users[user]:
+                    users[user]["money"] = {}
+                if parts[2] not in users[user]["money"]:
+                    users[user]["money"][parts[2]] = 0
+
+                currencies_in_usage.add(parts[2])
+                users[user]["money"][parts[2]] += float(parts[1])
+                send_message("add_money", user, name, parts[1] + " " + parts[2])
+        elif "/rem" in txt:
+            subtracted = False
+            parts = txt.split(" ")
+            if "money" in users[user]:
+                if parts[2] in users[user]["money"]:
+                    if users[user]["money"][parts[2]] > float(parts[1]):
+                        users[user]["money"][parts[2]] -= float(parts[1])
+                        send_message("rem_money", user, name, parts[1] + " " + parts[2])
+                        subtracted = True
+
+            if not subtracted:
+                send_message("rem_money_neg", user, name, parts[1] + " " + parts[2])
+        elif "/info" == txt:
+            send_message("info", user, name, user_dict=users)
+        elif "/to_cur" in txt:
+            users[user]["to_cur"] = txt.split(" ")[1]
+            currencies_in_usage.add(users[user]["to_cur"])
 
 
 def main():
-    from_arr = []
-    to_arr = []
+    bot.message_loop(message_handler)
 
-    to = False
-    index = 1
-    for arg in sys.argv:
-        index += 1
-        if arg == "to":
-            to = True
-            continue
-        elif arg == "done":
-            index -= 1
-            break
-
-        if to:
-            to_arr.append(arg)
-        else:
-            from_arr.append(arg)
-
-    investments = []
-    for investment in sys.argv[index:]:
-        investments.append(investment)
-    user_thread = Thread(target=storeUsers)
-    user_thread.start()
-#    sum_invest = current_investment(from_arr[1:], to_arr, investments)
- #   print(sum_invest)
-
-    threshold_min = float(input("enter your min threshold: "))
-    threshold_max = float(input("enter your max threshold: "))
-    conn_string = "port=9700"
-    conn = psycopg2.connect(conn_string)
-    cursor = conn.cursor()
-    while True:
-        cursor.execute("SELECT user_id FROM users;")
-        for i in cursor:
-            users.add(i[0])
-
-        sum_invest = current_investment(from_arr[1:], to_arr, investments)
-        for i in range(360):
-
-            if sum_invest <= threshold_min:
-                notify(False, sum_invest)
-            elif sum_invest >= threshold_max:
-                notify(True, sum_invest)
-            time.sleep(10)
-            # time.sleep(3600)
+    while 1:
+        for user in users:
+            if user["to_cur"] is not None and user["money"] is not None:
+                cur_investment = current_investment(fetch_currency(), user["money"], user["to_cur"])
+                if cur_investment > user["max"]:
+                    send_message("higher", user, user["name"])
+        time.sleep(10)
 
 
 if __name__ == "__main__":
