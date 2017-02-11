@@ -1,24 +1,7 @@
 language: python
 python:
-  - "3.5"
+  - "2.7"
 # command to install dependencies
 install: "pip install -r requirements.txt"
 # command to run tests
 script: pytest
-services:
-  - postgresql
-before_script:
-  - export PG_DATA=$(brew --prefix)/var/postgres
-  - pg_ctl -w start -l postgres.log --pgdata ${PG_DATA}
-  - createuser -s postgres
-  - psql -c 'create database travis_ci_test;' -U postgres
-  - psql -c 'CREATE TABLE users (
-             user_id TEXT unique,
-             currency_from TEXT[],
-             currency_to TEXT,
-             amount_from INTEGER[],
-             min_threshold INTEGER,
-             max_threshold INTEGER);' -U postgres
-  -
-addons:
-  postgresql: "9.6"
