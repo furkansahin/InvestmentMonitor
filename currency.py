@@ -180,12 +180,14 @@ def main():
     while 1:
         for user in users:
             if "to_cur" in users[int(user)] and "money" in users[int(user)]:
-                cur_investment = current_investment(fetch_currency(), users[int(user)]["money"], users[int(user)]["to_cur"])
+                cur_investment = current_investment(fetch_currency(currencies=[key for key in users[int(user)]["money"]],
+                                                                   to_currency=users[user]["to_cur"]),
+                                                    users[int(user)]["money"], users[user]["to_cur"], users[int(user)]["money"], users[int(user)]["to_cur"])
                 if "max" in users[int(user)] and cur_investment > users[int(user)]["max"]:
                     send_message("higher", int(user), users[int(user)]["name"])
                 elif "min" in users[int(user)] and cur_investment < users[int(user)]["min"]:
                     send_message("lower", int(user), users[int(user)]["name"])
-        time.sleep(600)
+        time.sleep(60)
 
 
 if __name__ == "__main__":
