@@ -87,7 +87,9 @@ def send_message(msg_type, user, name, money=" ", user_dict={}):
         msg += str(cur_investment) + users[user]["to_cur"]
     elif msg_type == "higher":
         msg = "Dear " + name + ", you are making money! Your total investment value is now "
-        cur_investment = current_investment(fetch_currency(), users[int(user)]["money"], users[user]["to_cur"])
+        cur_investment = current_investment(fetch_currency(currencies=[key for key in users[int(user)]["money"]],
+                                                           to_currency=users[user]["to_cur"]),
+                                            users[int(user)]["money"], users[user]["to_cur"])
         msg += str(cur_investment) + users[user]["to_cur"]
 
     bot.sendMessage(user, msg)
@@ -182,12 +184,12 @@ def main():
             if "to_cur" in users[int(user)] and "money" in users[int(user)]:
                 cur_investment = current_investment(fetch_currency(currencies=[key for key in users[int(user)]["money"]],
                                                                    to_currency=users[user]["to_cur"]),
-                                                    users[int(user)]["money"], users[user]["to_cur"], users[int(user)]["money"], users[int(user)]["to_cur"])
+                                                    users[int(user)]["money"], users[user]["to_cur"])
                 if "max" in users[int(user)] and cur_investment > users[int(user)]["max"]:
                     send_message("higher", int(user), users[int(user)]["name"])
                 elif "min" in users[int(user)] and cur_investment < users[int(user)]["min"]:
                     send_message("lower", int(user), users[int(user)]["name"])
-        time.sleep(60)
+        time.sleep(10)
 
 
 if __name__ == "__main__":
