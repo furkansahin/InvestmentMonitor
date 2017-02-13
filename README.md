@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/furkansahin/InvestmentMonitor.svg?branch=master)
+![Build Status](https://travis-ci.org/furkansahin/InvestmentMonitor.svg?branch=master)
 
 # InvestmentMonitor
 InvestMonitor is a personal investment monitor implemented in Python.
