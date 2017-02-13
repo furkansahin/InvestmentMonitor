@@ -10,24 +10,28 @@ currencies = {"USD", "TRY", "GBP", "CHF", "JPY", "EUR"}
 currencies_in_usage = set()
 
 
-def fetch_currency():
-    url = "http://finance.yahoo.com/webservice/v1/symbols/allcurrencies/quote?format=json"
+def fetch_currency(currencies, to_currency):
+    cur_values = {}
+    query_keys = set()
 
+    for cur in currencies_in_usage:
+        cur_values[cur + to_currency] = 0
+        query_keys.add("%22" + cur + to_currency + "%22")
+
+    str_val = ""
+
+    for x in query_keys:
+        str_val += x + "%2C"
+
+    url = "https://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20yahoo.finance.xchange%20where%20pair%20in%20("\
+          + str_val[:-3] + ")&format=json&diagnostics=true&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys&callback"
     response = requests.get(url)
 
     data = response.json()
+    for resource in data['query']['results']['rate']:
+        if str(resource['id']) in cur_values:
+            cur_values[str(resource['id'])] = float(resource['Rate'])
 
-    cur_values = {}
-    if data:
-        for cur in currencies_in_usage:
-            if cur is not "USD":
-                cur_values["USD/" + cur] = 0
-
-        for resource in data["list"]["resources"]:
-            if str(resource['resource']['fields']['name']) in cur_values:
-                cur_values[str(resource['resource']['fields']['name'])] = float(resource['resource']['fields']["price"])
-
-    cur_values["USD/USD"] = 1
     return cur_values
 
 
@@ -35,7 +39,7 @@ def current_investment(cur_values, money, to_cur):
     sum_investment = 0.0
 
     for mon in money:
-        sum_investment += (cur_values["USD/" + to_cur] / cur_values["USD/" + mon]) * money[mon]
+        sum_investment += (cur_values[mon + to_cur]) * money[mon]
 
     return sum_investment
 
@@ -67,7 +71,9 @@ def send_message(msg_type, user, name, money=" ", user_dict={}):
             msg = "Dear " + name + ", your balance is as the following;\n"
             for money in user_dict[user]["money"]:
                 msg += str(user_dict[user]["money"][money]) + " " + str(money) + "\n"
-            cur_investment = current_investment(fetch_currency(), users[user]["money"], users[user]["to_cur"])
+            cur_investment = current_investment(fetch_currency(currencies=[key for key in users[int(user)]["money"]],
+                                                           to_currency=users[user]["to_cur"]),
+                                            users[int(user)]["money"], users[user]["to_cur"])
             msg += "And in total you have " + str(cur_investment) + " " + users[user]["to_cur"]
         else:
             msg = "First you need to add some money into your account by the /add command"
@@ -75,7 +81,9 @@ def send_message(msg_type, user, name, money=" ", user_dict={}):
         msg = "Dear " + name + ", please first define the currency you live in with the command /to_cur CUR"
     elif msg_type == "lower":
         msg = "Dear " + name + ", you are losing money! Your total investment value is now "
-        cur_investment = current_investment(fetch_currency(), users[int(user)]["money"], users[user]["to_cur"])
+        cur_investment = current_investment(fetch_currency(currencies=[key for key in users[int(user)]["money"]],
+                                                           to_currency=users[user]["to_cur"]),
+                                            users[int(user)]["money"], users[user]["to_cur"])
         msg += str(cur_investment) + users[user]["to_cur"]
     elif msg_type == "higher":
         msg = "Dear " + name + ", you are making money! Your total investment value is now "
@@ -177,7 +185,7 @@ def main():
                     send_message("higher", int(user), users[int(user)]["name"])
                 elif "min" in users[int(user)] and cur_investment < users[int(user)]["min"]:
                     send_message("lower", int(user), users[int(user)]["name"])
-        time.sleep(10)
+        time.sleep(600)
 
 
 if __name__ == "__main__":
